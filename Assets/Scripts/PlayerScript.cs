@@ -3,14 +3,13 @@ using UnityEngine.UI;
 
 public class PlayerScript : MonoBehaviour
 {
-    public Rigidbody RB;
     //camara
     public Camera myCamera;
     private float FOV = 50;
     public float Sensitivity = 2f;
     private float yaw = 0.0f;
     private float pitch = 0.0f;
-    private float maxLookAngle = 50f;
+    private float maxLookAngle = 80f;
 
     //crosshair
     public bool lockCursor = true;
@@ -20,6 +19,7 @@ public class PlayerScript : MonoBehaviour
     private Image crosshairObject;
 
     //movement
+    public Rigidbody RB;
     public float walkSpeed = 5f;
     private float maxVelocityChange = 10f;
     public float jumpPower;
@@ -28,22 +28,26 @@ public class PlayerScript : MonoBehaviour
     public bool isJumping;
     public bool isGrounded;
 
+    //holding
+    public GameObject theObject;
+    public Transform holdPos;
+    private Rigidbody objectRB;
     private void Awake()
     {
         RB = GetComponent<Rigidbody>();
         crosshairObject = GetComponentInChildren<Image>();
-        myCamera.fieldOfView = FOV; 
+        myCamera.fieldOfView = FOV;
     }
     void Start()
     {
-        if(lockCursor)
+        if (lockCursor)
         {
             Cursor.lockState = CursorLockMode.Locked;
         }
         if (crosshair)
         {
             crosshairObject.sprite = crosshairImage;
-            crosshairObject.color = crosshairColor; 
+            crosshairObject.color = crosshairColor;
 
         }
         else
@@ -55,6 +59,7 @@ public class PlayerScript : MonoBehaviour
 
     void Update()
     {
+        //camera
         myCamera.fieldOfView = FOV;
 
         yaw = transform.localEulerAngles.y + Input.GetAxis("Mouse X") * Sensitivity;
@@ -62,18 +67,58 @@ public class PlayerScript : MonoBehaviour
 
         pitch = Mathf.Clamp(pitch, -maxLookAngle, maxLookAngle);
         transform.localEulerAngles = new Vector3(0, yaw, 0);
-        myCamera.transform.localEulerAngles = new Vector3 (pitch, 0, 0);
-
+        myCamera.transform.localEulerAngles = new Vector3(pitch, 0, 0);
+        //jump
         if (Input.GetKeyDown(jumpKey) && isGrounded)
         {
             Jump();
         }
-
         CheckGround();
+        //hold system
+        if (Input.GetKeyDown(KeyCode.Mouse0))
+        {
+            if (Physics.Raycast(myCamera.transform.position, myCamera.transform.forward, out RaycastHit hit, 10))
+            {
+                if (hit.rigidbody != null && hit.collider.CompareTag("canPickUp"))
+                {
+                    objectRB = hit.rigidbody;
+                    objectRB.useGravity = false;
+                }
+            }
+        }
+        if (Input.GetKey(KeyCode.Mouse0) && objectRB != null)
+        {
+            Vector3 targetPos = holdPos.position;
+            Vector3 direction = (targetPos - objectRB.position);
+            float moveForce = 500;
+            objectRB.linearVelocity = direction * moveForce * Time.deltaTime;
+        }
 
+        if (Input.GetKeyUp(KeyCode.Mouse0) && objectRB != null)
+        {
+            objectRB.useGravity = true;
+            //objectRB.linearVelocity = Vector3.zero;
+            objectRB = null;
+        }
+
+        if (Input.GetKeyDown(KeyCode.Mouse1) && objectRB != null)
+        {
+            objectRB.AddExplosionForce(1000f, transform.position, 50f, 0f);
+            objectRB.AddTorque(Random.insideUnitSphere * 100f);
+            objectRB = null;
+        }
+        if (Input.GetKey(KeyCode.LeftShift))
+        {
+            walkSpeed = 10;
+        }
+        else
+        {
+            walkSpeed = 5;
+        }
     }
     private void FixedUpdate()
     {
+        //movement
         Vector3 V = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));
 
         if (V.x != 0 || V.z != 0 && isGrounded)
@@ -103,7 +148,7 @@ public class PlayerScript : MonoBehaviour
         float distance = col.bounds.extents.y + 0.5f;
 
         isGrounded = Physics.Raycast(origin, direction, out RaycastHit hit, distance, groundLayer);
-       
+
     }
     private void Jump()
     {
