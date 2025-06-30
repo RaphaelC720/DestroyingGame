@@ -90,8 +90,9 @@ public class PlayerScript : MonoBehaviour
         {
             Vector3 targetPos = holdPos.position;
             Vector3 direction = (targetPos - objectRB.position);
-            float moveForce = 500;
-            objectRB.linearVelocity = direction * moveForce * Time.deltaTime;
+            float moveForce = 1f;
+            objectRB.linearVelocity = Vector3.zero;
+            objectRB.AddForce(direction * moveForce, ForceMode.Impulse);
         }
 
         if (Input.GetKeyUp(KeyCode.Mouse0) && objectRB != null)
@@ -103,9 +104,10 @@ public class PlayerScript : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Mouse1) && objectRB != null)
         {
-            objectRB.AddExplosionForce(1000f, transform.position, 50f, 0f);
+            objectRB.useGravity = true;
+            objectRB.AddExplosionForce(1000f, transform.position, 50f, -1.25f);
             objectRB.AddTorque(Random.insideUnitSphere * 100f);
-            objectRB = null;
+            objectRB = null; 
         }
         if (Input.GetKey(KeyCode.LeftShift))
         {
